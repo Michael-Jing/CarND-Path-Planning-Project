@@ -610,7 +610,17 @@ int main() {
             vector<vector<vector<double>>> predictions = get_predictions(sensor_fusion, pred_steps, step_time_interval);
 
 
+            int left_lane = lane - 1;
+            int right_lane = lane + 1;
             bool too_close = false;
+            bool can_change_left = false;
+            bool can_change_right = false;
+            if (left_lane >= 0) {
+                can_change_left = true;
+            }
+            if (right_lane <= 2) {
+                can_change_right = true;
+            }
 
             // find ref_v to use
             // vector<vector<double>> vector_snap = predictions[prev_size - 1];
@@ -629,11 +639,58 @@ int main() {
 
                     }
                 }
+                if (can_change_left) {
+
+                    if ( d < (2 + 4 * left_lane + 2) && d > (2 + 4 * left_lane - 2)) {
+                        if ((s > car_s) && (s - car_s) < 30) {
+                            can_change_left = false;
+                        }
+                        if ((s < car_s) && (car_s - s) < 30) {
+                            can_change_left = false;
+                        }
+                    }
+                }
+                if (can_change_right) {
+                    if (d < (2 + 4 * right_lane + 2) && d > (2 + 4 * right_lane - 2)) {
+                        if ((s > car_s) && (s - car_s) < 30) {
+                            can_change_right = false;
+                        }
+                        if ((s < car_s) && (car_s - s) < 30) {
+                            can_change_right   = false;
+                        }
+                    }
+                }
+
+            }
+            if (too_close) {
+                if (can_change_left) {
+                    lane -= 1;
+                } else if (can_change_right){
+                    lane += 1;
+                } else {
+                    ref_vel -= 0.224;
+                }
+            } else {
+                if (ref_vel < 49.5) {
+                    ref_vel += 0.224;
+                }
             }
 
-            double min_cost = 99999999999999999; // very big number
-            vector<vector<double>> best_trajectory;
-            if (too_close) {
+            auto best_trajectory = generate_trajectory(car_x, car_y, car_yaw, car_s,
+                                                       lane,
+                                                       lane,
+                                                       previous_path_x,
+                                                       previous_path_y,
+                                                       step_time_interval,
+                                                       ref_vel,
+                                                       map_waypoints_x, map_waypoints_y,
+                                                       map_waypoints_s,
+                                                       map_waypoints_dx, map_waypoints_dy, max_s);
+
+
+            //  double min_cost = 99999999999999999; // very big number
+            // vector<vector<double>> best_trajectory;
+            /* if (too_close) {
                 // slow down or change lane
                 vector<string> possible_state = get_possible_state(state, lane, keep_lane_counter);
                 //vector<int> possible_lanes = get_possible_lanes(lane);
@@ -649,7 +706,7 @@ int main() {
                     }
                     /*if (proposed_lane == lane) {
                         ref_vel -= 0.224;
-                    }*/
+                    }
                     vector<vector<double>> trajectory = generate_trajectory(car_x, car_y, car_yaw, car_s,
                                                                             proposed_lane,
                                                                             lane,
@@ -712,7 +769,7 @@ int main() {
                                                                     map_waypoints_dx, map_waypoints_dy, max_s);
                 best_trajectory = trajectory;
 
-            }
+            } */
 
 
 
